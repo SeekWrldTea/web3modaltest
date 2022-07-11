@@ -1,13 +1,23 @@
 import WalletConnectProvider from '@walletconnect/web3-provider'
-import { providers } from 'ethers'
+import { ethers, providers } from 'ethers'
 import Head from 'next/head'
-import { useCallback, useEffect, useReducer } from 'react'
+import { useState, useCallback, useEffect, useReducer } from 'react'
 import WalletLink from 'walletlink'
 import Web3Modal from 'web3modal'
 import { ellipseAddress, getChainData } from '../lib/utilities'
+import {
+  VStack,
+  useDisclosure,
+  Button,
+  Text,
+  HStack,
+  Box
+} from "@chakra-ui/react";
+import { useMotionValue, useTransform } from "framer-motion"
+import ABI from "../public/abi.json";
 
 const INFURA_ID = '460f40a260564ac4a4f4b3fffb032dad'
-
+const CONTRACT = '0x13eb966f075c503a62358fee46c2865F5a5Faa4e'
 const providerOptions = {
   walletconnect: {
     package: WalletConnectProvider, // required
@@ -42,7 +52,7 @@ const providerOptions = {
 let web3Modal
 if (typeof window !== 'undefined') {
   web3Modal = new Web3Modal({
-    network: 'mainnet', // optional
+    network: 'rinkeby', // optional
     cacheProvider: true,
     providerOptions, // required
   })
@@ -112,6 +122,7 @@ function reducer(state: StateType, action: ActionType): StateType {
 export const Home = (): JSX.Element => {
   const [state, dispatch] = useReducer(reducer, initialState)
   const { provider, web3Provider, address, chainId } = state
+  const [balance, setBalance] = useState([]);
 
   const connect = useCallback(async function () {
     // This is the initial `provider` that is returned when
@@ -150,11 +161,50 @@ export const Home = (): JSX.Element => {
     [provider]
   )
 
+
+  
+  
+
+  async function getBalance() {
+    if (typeof window.ethereum !== "undefined") {
+      let accounts = await window.ethereum.request({
+        method: "eth_requestAccounts"
+      });
+      const contractAddress = "0x13eb966f075c503a62358fee46c2865F5a5Faa4e";
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const contract = new ethers.Contract(CONTRACT, ABI, provider);
+      const ids = [];
+
+
+      try {
+        const data = await contract.balanceOf(accounts[0]);
+        if(parseInt(data.toString()) > 0 ){
+          for (let nftId = 1; nftId < 12; nftId++) {
+            // Runs 5 times, with values of step 0 through 4.
+            const data = await contract.ownerOf(nftId);
+            console.log("1st", accounts[0]);
+            console.log("2st", data.toString());
+            
+            if(accounts[0].toLowerCase() === data.toString().toLowerCase()){
+              ids.push(nftId);
+            }
+          } 
+        }
+        await setBalance(ids);
+      } catch (err) {
+        console.log("Error: ", err);
+      }
+    }
+  }
+
+  
+
   // Auto connect to the cached provider
   useEffect(() => {
     if (web3Modal.cachedProvider) {
       connect()
     }
+    getBalance();
   }, [connect])
 
   // A `provider` should come with EIP-1193 events. We'll listen for those events
@@ -202,35 +252,60 @@ export const Home = (): JSX.Element => {
   return (
     <div className="container">
       <Head>
-        <title>Create Next App</title>
+        <title>3d link app</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <header>
-        {address && (
-          <div className="grid">
-            <div>
-              <p className="mb-1">Network:</p>
-              <p>{chainData?.name}</p>
-            </div>
-            <div>
-              <p className="mb-1">Address:</p>
-              <p>{ellipseAddress(address)}</p>
-            </div>
-          </div>
-        )}
-      </header>
 
       <main>
-        <h1 className="title">Web3Modal Example</h1>
         {web3Provider ? (
-          <button className="button" type="button" onClick={disconnect}>
-            Disconnect
-          </button>
+          <>
+            <VStack justifyContent="center" alignItems="center" h="100vh">
+                <Text
+                  margin="2em"
+                  lineHeight="1.15"
+                  fontSize={["1.5em", "2em", "3em", "4em"]}
+                  fontWeight="600"
+                  sx={{
+                    background: "linear-gradient(90deg, #1652f0 0%, #b9cbfb 70.35%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent"
+                  }}
+                >
+                  Here is your 3d Model link
+                </Text> 
+
+                {balance.map( nft =>(
+                  <li>link {nft} </li>
+                )) }
+                <button className="button" type="button" onClick={disconnect}>
+                  Disconnect
+                </button>
+              </VStack>
+          </>
+
         ) : (
-          <button className="button" type="button" onClick={connect}>
-            Connect
-          </button>
+          <>
+          <VStack justifyContent="center" alignItems="center" h="100vh">
+            <Text
+              margin="2em"
+              lineHeight="1.15"
+              fontSize={["1.5em", "2em", "3em", "4em"]}
+              fontWeight="600"
+              sx={{
+                background: "linear-gradient(90deg, #1652f0 0%, #b9cbfb 70.35%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent"
+              }}
+            >
+             Connect yourself to access your 3d model
+            </Text> 
+            <button className="button" type="button" onClick={connect}>
+              Connect
+            </button>
+          </VStack>
+          </>
+   
         )}
       </main>
 
